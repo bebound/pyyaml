@@ -44,10 +44,10 @@ jobs:
       package_version: ${{ steps.build_sdist.outputs.package_version }}
     steps:
     - name: Checkout PyYAML
-      uses: actions/checkout@v4
+      uses: actions/checkout@v6
 
     - name: Install a python
-      uses: actions/setup-python@v5
+      uses: actions/setup-python@v6
       with:
         python-version: 3.x
 
@@ -66,7 +66,7 @@ jobs:
         echo "package_version=$(ls ./dist | sed -En 's/pyyaml-(.+)\.tar\.gz/\1/p')" >> "$GITHUB_OUTPUT"
 
     - name: Upload sdist artifact
-      uses: actions/upload-artifact@v4
+      uses: actions/upload-artifact@v7
       with:
         name: ${{ steps.build_sdist.outputs.artifact_name }}
         path: dist/${{ steps.build_sdist.outputs.artifact_name }}
@@ -78,7 +78,7 @@ jobs:
     outputs:
       matrix_json: ${{ steps.make_matrix.outputs.matrix_json }}
     steps:
-    - uses: actions/checkout@v4
+    - uses: actions/checkout@v6
     - name: make a matrix
       id: make_matrix
       uses: ./.github/actions/dynamatrix
@@ -104,17 +104,17 @@ jobs:
     steps:
     - name: Check cached libyaml state
       id: cached_libyaml
-      uses: actions/cache@v4
+      uses: actions/cache@v5
       with:
         path: libyaml
         key: libyaml_${{ matrix.platform }}_${{ matrix.arch }}_${{ env.LIBYAML_REF }}
 
     - name: configure docker foreign arch support
-      uses: docker/setup-qemu-action@v3
+      uses: docker/setup-qemu-action@v4
       if: matrix.arch != 'x86_64' && steps.cached_libyaml.outputs.cache-hit != 'true'
 
     - name: Checkout pyyaml
-      uses: actions/checkout@v4
+      uses: actions/checkout@v6
       if: steps.cached_libyaml.outputs.cache-hit != 'true'
 
     - name: Build libyaml
@@ -138,7 +138,7 @@ jobs:
     outputs:
       matrix_json: ${{ steps.make_matrix.outputs.matrix_json }}
     steps:
-    - uses: actions/checkout@v4
+    - uses: actions/checkout@v6
     - name: make a matrix
       id: make_matrix
       uses: ./.github/actions/dynamatrix
@@ -196,20 +196,20 @@ jobs:
     steps:
     - name: fetch sdist artifact
       id: fetch_sdist
-      uses: actions/download-artifact@v4
+      uses: actions/download-artifact@v8
       with:
-        name: ${{ needs.build_sdist.outputs.artifact_name }}
+        name: ${{ needs.python_sdist.outputs.artifact_name }}
 
     - name: Fetch cached libyaml
       id: cached_libyaml
-      uses: actions/cache/restore@v4
+      uses: actions/cache/restore@v5
       with:
         path: libyaml
         key: libyaml_${{matrix.platform}}_${{matrix.arch}}_${{env.LIBYAML_REF}}
         fail-on-cache-miss: true
 
     - name: configure docker foreign arch support
-      uses: docker/setup-qemu-action@v3
+      uses: docker/setup-qemu-action@v4
       if: matrix.arch != 'x86_64' && matrix.arch != 'aarch64'
 
     - name: Build/Test/Package
@@ -241,7 +241,7 @@ jobs:
 
         mkdir pyyaml
 
-        tar zxf ${{ steps.fetch_sdist.outputs.download-path }}/pyyaml*.tar.gz/pyyaml*.tar.gz --strip-components=1 -C pyyaml
+        tar zxf ${{ steps.fetch_sdist.outputs.download-path }}/pyyaml*.tar.gz --strip-components=1 -C pyyaml
 
         cat << 'EOF' > build_config.toml
         [tool.cibuildwheel.config-settings]
@@ -254,7 +254,7 @@ jobs:
         # FIXME: ensure exactly one artifact
 
     - name: Upload artifacts
-      uses: actions/upload-artifact@v4
+      uses: actions/upload-artifact@v7
       with:
         name: ${{ steps.build.outputs.artifact_name }}
         path: dist/*.whl
@@ -277,18 +277,18 @@ jobs:
     steps:
     - name: Check cached libyaml state
       id: cached_libyaml
-      uses: actions/cache@v4
+      uses: actions/cache@v5
       with:
         path: libyaml
         key: libyaml_macos_${{matrix.arch}}_${{env.LIBYAML_REF}}
 
     - name: Checkout PyYAML
-      uses: actions/checkout@v4
+      uses: actions/checkout@v6
       if: steps.cached_libyaml.outputs.cache-hit != 'true'
 
     - name: Build libyaml
       env:
-        MACOSX_DEPLOYMENT_TARGET: ${{ matrix.deployment_target || '10.13' }}
+        MACOSX_DEPLOYMENT_TARGET: ${{ matrix.deployment_target || '10.15' }}
         SDKROOT: ${{ matrix.sdkroot || 'macosx' }}
       run: |
         set -eux
@@ -302,7 +302,7 @@ jobs:
     outputs:
       matrix_json: ${{ steps.make_matrix.outputs.matrix_json }}
     steps:
-    - uses: actions/checkout@v4
+    - uses: actions/checkout@v6
     - name: make a matrix
       id: make_matrix
       uses: ./.github/actions/dynamatrix
@@ -389,20 +389,20 @@ jobs:
     steps:
     - name: fetch sdist artifact
       id: fetch_sdist
-      uses: actions/download-artifact@v4
+      uses: actions/download-artifact@v8
       with:
-        name: ${{ needs.build_sdist.outputs.artifact_name }}
+        name: ${{ needs.python_sdist.outputs.artifact_name }}
 
     - name: Get cached libyaml state
       id: cached_libyaml
-      uses: actions/cache/restore@v4
+      uses: actions/cache/restore@v5
       with:
         path: libyaml
         key: libyaml_macos_${{ matrix.arch }}_${{env.LIBYAML_REF}}
         fail-on-cache-miss: true
 
     - name: Install python
-      uses: actions/setup-python@v5
+      uses: actions/setup-python@v6
       with:
         python-version: '3.11'  # as of 2024-05, this has to be < 3.12 since the macos-15 runner image's
                                 # built-in virtualenv/pip are pinned to busted versions that fail on newer Pythons
@@ -416,7 +416,7 @@ jobs:
         CIBW_TEST_COMMAND: pytest {package}
         CIBW_TEST_REQUIRES: pytest
         LIBRARY_PATH: ../libyaml/src/.libs
-        MACOSX_DEPLOYMENT_TARGET: ${{ matrix.deployment_target || '10.13' }}
+        MACOSX_DEPLOYMENT_TARGET: ${{ matrix.deployment_target || '10.15' }}
         PYYAML_FORCE_CYTHON: 1
         PYYAML_FORCE_LIBYAML: 1
         SDKROOT: ${{ matrix.sdkroot || 'macosx' }}
@@ -426,7 +426,7 @@ jobs:
         python3 -m pip install -U --user ${{ matrix.cibw_version || 'cibuildwheel' }}
         mkdir pyyaml
 
-        tar zxf pyyaml*.tar.gz/pyyaml*.tar.gz --strip-components=1 -C pyyaml
+        tar zxf pyyaml*.tar.gz --strip-components=1 -C pyyaml
 
         cat << 'EOF' > build_config.toml
         [tool.cibuildwheel.config-settings]
@@ -439,7 +439,7 @@ jobs:
         # FIXME: ensure exactly one artifact
 
     - name: Upload artifacts
-      uses: actions/upload-artifact@v4
+      uses: actions/upload-artifact@v7
       with:
         name: ${{ steps.build.outputs.artifact_name }}
         path: dist/*.whl
@@ -458,7 +458,7 @@ jobs:
     steps:
     - name: Get cached libyaml state
       id: cached_libyaml
-      uses: actions/cache@v4
+      uses: actions/cache@v5
       with:
         path: libyaml
         key: libyaml_${{ 'windows' }}_${{ matrix.arch }}_${{ env.LIBYAML_REF }}
@@ -481,7 +481,7 @@ jobs:
         mkdir libyaml/build
 
         pushd libyaml/build
-        cmake.exe -G "Visual Studio 17 2022" -A ${{ matrix.arch }} -DYAML_STATIC_LIB_NAME=yaml ..
+        cmake.exe -G "Visual Studio 17 2022" -A ${{ matrix.arch }} -DYAML_STATIC_LIB_NAME=yaml -DCMAKE_POLICY_VERSION_MINIMUM="3.10" ..
         cmake.exe --build . --config Release
         popd
 
@@ -490,7 +490,7 @@ jobs:
     outputs:
       matrix_json: ${{ steps.make_matrix.outputs.matrix_json }}
     steps:
-    - uses: actions/checkout@v4
+    - uses: actions/checkout@v6
     - name: make a matrix
       id: make_matrix
       uses: ./.github/actions/dynamatrix
@@ -571,7 +571,14 @@ jobs:
             arch: win32
             omit: ${{ env.skip_ci_redundant_jobs }}
 
-          # no more win32 after 3.13?
+          - spec: cp314-win32
+            arch: win32
+            omit: ${{ env.skip_ci_redundant_jobs }}
+          
+          - spec: cp314t-win32
+            arch: win32
+            omit: ${{ env.skip_ci_redundant_jobs }}
+          
 
   windows_pyyaml:
     needs: [python_sdist, windows_libyaml, make_windows_pyyaml_matrix]
@@ -589,20 +596,20 @@ jobs:
 
     - name: fetch sdist artifact
       id: fetch_sdist
-      uses: actions/download-artifact@v4
+      uses: actions/download-artifact@v8
       with:
-        name: ${{ needs.build_sdist.outputs.artifact_name }}
+        name: ${{ needs.python_sdist.outputs.artifact_name }}
 
     - name: Get cached libyaml state
       id: cached_libyaml
-      uses: actions/cache/restore@v4
+      uses: actions/cache/restore@v5
       with:
         path: libyaml
         key: libyaml_${{'windows'}}_${{ matrix.arch }}_${{env.LIBYAML_REF}}
         fail-on-cache-miss: true
 
     - name: Install python
-      uses: actions/setup-python@v5
+      uses: actions/setup-python@v6
       with:
         python-version: 3.x
 
@@ -623,7 +630,7 @@ jobs:
         python -m pip install -U --user ${{ matrix.cibw_version || 'cibuildwheel' }}
         mkdir pyyaml
 
-        tar zxf pyyaml*.tar.gz/pyyaml*.tar.gz --strip-components=1 -C pyyaml
+        tar zxf pyyaml*.tar.gz --strip-components=1 -C pyyaml
 
         cat << 'EOF' > build_config.toml
         [tool.cibuildwheel.config-settings]
@@ -636,7 +643,7 @@ jobs:
         # FIXME: ensure exactly one artifact
 
     - name: Upload artifacts
-      uses: actions/upload-artifact@v4
+      uses: actions/upload-artifact@v7
       with:
         name: ${{ steps.build.outputs.artifact_name }}
         path: dist/*.whl
@@ -648,7 +655,7 @@ jobs:
     runs-on: ubuntu-24.04
     steps:
     - name: merge all artifacts
-      uses: actions/upload-artifact/merge@v4
+      uses: actions/upload-artifact/merge@v7
       with:
         name: dist-pyyaml-${{ needs.python_sdist.outputs.package_version }}
         delete-merged: true
